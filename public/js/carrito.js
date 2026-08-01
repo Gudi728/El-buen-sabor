@@ -52,6 +52,56 @@ document.addEventListener('DOMContentLoaded', () => {
   let productAvailability = new Map();
   let availabilityStream = null;
 
+  function clearInvalidState() {
+    [
+      customerNameInput,
+      customerLastnameInput,
+      customerPhoneInput,
+      deliveryAddressInput,
+      deliveryReferenceInput,
+      deliveryTimeInput
+    ].forEach((input) => {
+      if (!input) return;
+      input.classList.remove('is-invalid');
+    });
+  }
+
+  function ensureCheckoutInputsEnabled() {
+    [
+      customerNameInput,
+      customerLastnameInput,
+      customerPhoneInput,
+      deliveryAddressInput,
+      deliveryReferenceInput,
+      deliveryTimeInput,
+      generalNotesInput
+    ].forEach((input) => {
+      if (!input) return;
+      input.disabled = false;
+      input.readOnly = false;
+    });
+  }
+
+  function resetCheckoutFormState() {
+    checkoutForm.reset();
+    clearInvalidState();
+    const pickupOption = document.getElementById('pickup-type');
+    if (pickupOption) {
+      pickupOption.checked = true;
+    }
+    ensureCheckoutInputsEnabled();
+    updateDeliveryFieldVisibility();
+  }
+
+  function cleanupOrphanBackdrops() {
+    const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+    if (backdrops.length <= 1) return;
+
+    for (let index = 0; index < backdrops.length - 1; index += 1) {
+      backdrops[index].remove();
+    }
+  }
+
   const money = new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -434,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    updateDeliveryFieldVisibility();
+    resetCheckoutFormState();
     checkoutModal.show();
   });
 
@@ -508,6 +558,28 @@ document.addEventListener('DOMContentLoaded', () => {
   checkoutForm.addEventListener('submit', (event) => {
     event.preventDefault();
   });
+
+  if (modalElement) {
+    modalElement.addEventListener('show.bs.modal', () => {
+      ensureCheckoutInputsEnabled();
+      cleanupOrphanBackdrops();
+    });
+
+    modalElement.addEventListener('shown.bs.modal', () => {
+      customerNameInput.focus();
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', () => {
+      clearInvalidState();
+      cleanupOrphanBackdrops();
+    });
+  }
+
+  if (clearCartModalElement) {
+    clearCartModalElement.addEventListener('hidden.bs.modal', () => {
+      cleanupOrphanBackdrops();
+    });
+  }
 
   updateDeliveryFieldVisibility();
   connectAvailabilityStream();
