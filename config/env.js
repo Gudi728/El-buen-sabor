@@ -5,6 +5,7 @@ dotenv.config();
 const env = {
   port: process.env.PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
+  appTimeZone: process.env.APP_TIMEZONE || 'America/Argentina/Cordoba',
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID || '',
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',

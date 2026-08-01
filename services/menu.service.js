@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { getFirestore } = require('../config/firebase');
+const env = require('../config/env');
 const slugify = require('../utils/slugify');
 
 const CONFIG_DOC_ID = 'app';
@@ -408,15 +409,61 @@ function getActiveDaysText(daysMap) {
   return activeDays.join(', ');
 }
 
+function getNowByTimeZone(timeZone) {
+  const fallback = new Date();
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    const parts = formatter.formatToParts(fallback);
+    const valueByType = parts.reduce((acc, part) => {
+      if (part.type !== 'literal') {
+        acc[part.type] = part.value;
+      }
+      return acc;
+    }, {});
+
+    const weekdayMap = {
+      Sun: 'sunday',
+      Mon: 'monday',
+      Tue: 'tuesday',
+      Wed: 'wednesday',
+      Thu: 'thursday',
+      Fri: 'friday',
+      Sat: 'saturday'
+    };
+
+    const dayKey = weekdayMap[valueByType.weekday] || DAY_KEYS[fallback.getDay()];
+    const hours = Number(valueByType.hour) || fallback.getHours();
+    const minutes = Number(valueByType.minute) || fallback.getMinutes();
+
+    return {
+      dayKey,
+      nowMinutes: hours * 60 + minutes
+    };
+  } catch (error) {
+    return {
+      dayKey: DAY_KEYS[fallback.getDay()],
+      nowMinutes: fallback.getHours() * 60 + fallback.getMinutes()
+    };
+  }
+}
+
 function isOpenNow(horario) {
   if (horario.cerradoPorHoy) {
     return false;
   }
 
-  const now = new Date();
-  const dayKey = DAY_KEYS[now.getDay()];
-  const prevDayKey = DAY_KEYS[(now.getDay() + 6) % 7];
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const { dayKey, nowMinutes } = getNowByTimeZone(env.appTimeZone);
+  const dayIndex = DAY_KEYS.indexOf(dayKey);
+  const safeDayIndex = dayIndex >= 0 ? dayIndex : 0;
+  const prevDayKey = DAY_KEYS[(safeDayIndex + 6) % 7];
 
   const openMinutes = toMinutes(horario.apertura);
   const closeMinutes = toMinutes(horario.cierre);
